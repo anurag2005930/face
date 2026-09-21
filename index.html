@@ -1,0 +1,1150 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Storage Vault - Next-Gen Storage Management System</title>
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- FontAwesome 6 Icons CDN -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+
+  <div id="app-container">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="brand-header">
+        <div class="brand-icon">
+          <i class="fa-solid fa-hard-drive"></i>
+        </div>
+        <div>
+          <div class="brand-title">StorageVault</div>
+          <div class="brand-subtitle">Enterprise OS v4.2</div>
+        </div>
+      </div>
+
+      <ul class="nav-menu">
+        <div class="nav-section-title">Financial Operations</div>
+        <li>
+          <a class="nav-item active" data-view="payment-directory">
+            <i class="fa-solid fa-address-book"></i>
+            <span>Payment Directory</span>
+            <span class="badge badge-success">Directory</span>
+          </a>
+        </li>
+
+        <div class="nav-section-title">Digital Asset Vault</div>
+        <li>
+          <a class="nav-item" data-view="drive">
+            <i class="fa-solid fa-folder-tree"></i>
+            <span>Cloud Drive</span>
+          </a>
+        </li>
+        <li>
+          <a class="nav-item" onclick="cloudDrive.currentFilter = 'starred'; cloudDrive.render(); app.switchView('drive');">
+            <i class="fa-solid fa-star"></i>
+            <span>Starred Files</span>
+          </a>
+        </li>
+        <li>
+          <a class="nav-item" onclick="cloudDrive.currentFilter = 'trash'; cloudDrive.render(); app.switchView('drive');">
+            <i class="fa-solid fa-trash-can"></i>
+            <span>Trash Bin</span>
+          </a>
+        </li>
+
+        <div class="nav-section-title">Infrastructure & Hardware</div>
+        <li>
+          <a class="nav-item" data-view="server-nodes">
+            <i class="fa-solid fa-server"></i>
+            <span>Datacenter Volumes</span>
+            <span class="badge">3 Pools</span>
+          </a>
+        </li>
+        <li>
+          <a class="nav-item" data-view="warehouse">
+            <i class="fa-solid fa-boxes-stacked"></i>
+            <span>Warehouse Racks</span>
+          </a>
+        </li>
+        <li>
+          <a class="nav-item" data-view="speed-test">
+            <i class="fa-solid fa-gauge-high"></i>
+            <span>Internet Speed Test</span>
+            <span class="badge" style="background: rgba(6, 182, 212, 0.2); color: #06b6d4;">Diagnostic</span>
+          </a>
+        </li>
+
+        <div class="nav-section-title">Analytics & Audit</div>
+        <li>
+          <a class="nav-item" data-view="analytics">
+            <i class="fa-solid fa-chart-pie"></i>
+            <span>Analytics & Quota</span>
+          </a>
+        </li>
+        <li>
+          <a class="nav-item" data-view="activities">
+            <i class="fa-solid fa-list-check"></i>
+            <span>Activity Logs</span>
+          </a>
+        </li>
+      </ul>
+
+      <!-- Sidebar Quota Meter Widget -->
+      <div class="sidebar-storage-widget">
+        <div class="storage-widget-header">
+          <span style="font-weight: 600; color: var(--text-secondary);">Storage Used</span>
+          <span id="sidebar-meter-text">0 GB / 2 TB</span>
+        </div>
+        <div class="progress-bar-bg">
+          <div id="sidebar-meter-fill" class="progress-bar-fill" style="width: 0%;"></div>
+        </div>
+        <button class="sidebar-upgrade-btn" onclick="alert('Contact administrator to increase SAN quota allocation.')">
+          <i class="fa-solid fa-bolt"></i> Expand Quota
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <!-- Top Header Bar -->
+      <header class="top-header">
+        <div class="search-wrapper">
+          <i class="fa-solid fa-magnifying-glass search-icon"></i>
+          <input type="text" id="global-search-input" class="search-input" placeholder="Search files, folders, SKUs or volumes..." />
+        </div>
+
+        <div class="header-actions">
+          <button id="theme-toggle-btn" class="icon-btn" title="Toggle Light/Dark Theme">
+            <i class="fa-solid fa-moon"></i>
+          </button>
+
+          <button class="icon-btn" title="Export Vault Data Backup (JSON)" onclick="state.exportState(); app.showToast('Exported vault data backup!', 'success');">
+            <i class="fa-solid fa-download"></i>
+          </button>
+
+          <button class="icon-btn" title="Import Vault Data Backup (JSON)" onclick="document.getElementById('backup-file-input').click();">
+            <i class="fa-solid fa-upload"></i>
+          </button>
+
+          <button class="icon-btn" title="System Notifications" onclick="app.showToast('System SMART health check complete. All disks normal.', 'success')">
+            <i class="fa-regular fa-bell"></i>
+            <span class="dot-indicator"></span>
+          </button>
+
+          <div class="user-profile">
+            <div class="user-avatar">AU</div>
+            <span class="user-name">Admin User</span>
+            <i class="fa-solid fa-chevron-down" style="font-size: 0.75rem; color: var(--text-muted);"></i>
+          </div>
+        </div>
+      </header>
+
+      <!-- Hidden Real File Inputs -->
+      <input type="file" id="real-file-input" style="display: none;" multiple />
+      <input type="file" id="backup-file-input" style="display: none;" accept=".json" />
+
+      <!-- VIEW: Payment Directory Management System -->
+      <div id="view-payment-directory" class="view-container active">
+        <div class="view-header">
+          <div class="view-title-group">
+            <h1>Payment Directory Management System</h1>
+            <p>Enterprise payee directory, multi-currency routing, automated disbursements, and cash flow analytics.</p>
+          </div>
+          <div class="view-actions">
+            <button id="btn-export-payment-csv" class="btn btn-secondary">
+              <i class="fa-solid fa-file-csv"></i> Export Directory CSV
+            </button>
+            <button class="btn btn-primary" onclick="app.openModal('modal-add-payee')">
+              <i class="fa-solid fa-user-plus"></i> Add New Payee
+            </button>
+          </div>
+        </div>
+
+        <!-- Metric Cards Bar -->
+        <div class="metrics-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); margin-bottom: 1.5rem;">
+          <div class="metric-card">
+            <div class="metric-icon" style="background: rgba(99, 102, 241, 0.15); color: #6366f1;"><i class="fa-solid fa-address-book"></i></div>
+            <div class="metric-info">
+              <span class="metric-title">Total Directory Payees</span>
+              <h2 id="metric-total-payees">0</h2>
+              <span class="metric-sub" id="metric-active-payees">0 Verified</span>
+            </div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-icon" style="background: rgba(16, 185, 129, 0.15); color: #10b981;"><i class="fa-solid fa-circle-dollar-to-slot"></i></div>
+            <div class="metric-info">
+              <span class="metric-title">Total Outflow Volume</span>
+              <h2 id="metric-total-outflow">₹0</h2>
+              <span class="metric-sub">Completed Ledger Outflow</span>
+            </div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-icon" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b;"><i class="fa-solid fa-clock"></i></div>
+            <div class="metric-info">
+              <span class="metric-title">Pending Disbursements</span>
+              <h2 id="metric-pending-payouts">0</h2>
+              <span class="metric-sub">Requires Approval / Sync</span>
+            </div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-icon" style="background: rgba(6, 182, 212, 0.15); color: #06b6d4;"><i class="fa-solid fa-vault"></i></div>
+            <div class="metric-info">
+              <span class="metric-title">Gateway Treasury Balance</span>
+              <h2 id="metric-gateway-balance">₹0</h2>
+              <span class="metric-sub">Across 5 Active Accounts</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Payment Sub-Nav Tabs -->
+        <div class="payment-subtabs-bar">
+          <button class="payment-subtab-btn active" data-subtab="catalog">
+            <i class="fa-solid fa-users-gear"></i> Directory Catalog
+          </button>
+          <button class="payment-subtab-btn" data-subtab="gateways">
+            <i class="fa-solid fa-building-columns"></i> Gateways & Accounts
+          </button>
+          <button class="payment-subtab-btn" data-subtab="scheduled">
+            <i class="fa-solid fa-calendar-check"></i> Scheduled Payouts
+          </button>
+          <button class="payment-subtab-btn" data-subtab="ledger">
+            <i class="fa-solid fa-receipt"></i> Disbursement Ledger
+          </button>
+          <button class="payment-subtab-btn" data-subtab="analytics">
+            <i class="fa-solid fa-chart-line"></i> Payment Analytics
+          </button>
+        </div>
+
+        <!-- TAB 1: Catalog -->
+        <div id="payment-tab-catalog" class="payment-subtab-content active">
+          <div class="toolbar-bar">
+            <div class="toolbar-search">
+              <i class="fa-solid fa-magnifying-glass"></i>
+              <input type="text" id="payment-search-input" placeholder="Search by Payee Name, Company, Email, or Tax ID..." />
+            </div>
+
+            <div class="toolbar-controls">
+              <select id="payment-category-select" class="filter-select">
+                <option value="all">All Categories</option>
+                <option value="vendor">Vendor</option>
+                <option value="payroll">Payroll</option>
+                <option value="contractor">Contractor</option>
+                <option value="subscription">Subscription</option>
+                <option value="utility">Utility</option>
+                <option value="tax">Tax & Gov</option>
+                <option value="merchant">Merchant</option>
+              </select>
+
+              <select id="payment-status-select" class="filter-select">
+                <option value="all">All Statuses</option>
+                <option value="active">Active</option>
+                <option value="verified">Verified</option>
+                <option value="pending">Pending</option>
+                <option value="suspended">Suspended</option>
+              </select>
+
+              <div class="view-toggle-buttons">
+                <button id="btn-view-grid" class="view-toggle-btn active" title="Grid Card View"><i class="fa-solid fa-border-all"></i></button>
+                <button id="btn-view-table" class="view-toggle-btn" title="Table View"><i class="fa-solid fa-list"></i></button>
+              </div>
+            </div>
+          </div>
+
+          <div id="payment-catalog-container" class="payment-grid" style="margin-top: 1rem;">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+
+        <!-- TAB 2: Gateways & Accounts -->
+        <div id="payment-tab-gateways" class="payment-subtab-content">
+          <div id="payment-gateways-container" class="gateway-grid" style="margin-top: 1rem;">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+
+        <!-- TAB 3: Scheduled Payouts -->
+        <div id="payment-tab-scheduled" class="payment-subtab-content">
+          <div id="payment-scheduled-container" class="payment-table-wrapper" style="margin-top: 1rem;">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+
+        <!-- TAB 4: Disbursement Ledger -->
+        <div id="payment-tab-ledger" class="payment-subtab-content">
+          <div id="payment-ledger-container" class="payment-table-wrapper" style="margin-top: 1rem;">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+
+        <!-- TAB 5: Payment Analytics -->
+        <div id="payment-tab-analytics" class="payment-subtab-content">
+          <div class="analytics-grid" style="margin-top: 1rem;">
+            <div class="chart-card">
+              <div class="chart-header">
+                <h3><i class="fa-solid fa-chart-pie"></i> Outflow by Directory Category</h3>
+              </div>
+              <div class="chart-body">
+                <canvas id="chart-payment-outflow"></canvas>
+              </div>
+            </div>
+
+            <div class="chart-card">
+              <div class="chart-header">
+                <h3><i class="fa-solid fa-building-columns"></i> Gateway Treasury Balances</h3>
+              </div>
+              <div class="chart-body">
+                <canvas id="chart-payment-gateways"></canvas>
+              </div>
+            </div>
+
+            <div class="chart-card wide-chart">
+              <div class="chart-header">
+                <h3><i class="fa-solid fa-chart-column"></i> Monthly Disbursement Velocity</h3>
+              </div>
+              <div class="chart-body">
+                <canvas id="chart-payment-trends"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- VIEW 1: Cloud Drive View -->
+      <div id="view-drive" class="view-container">
+        <div class="view-header">
+          <div class="view-title-group">
+            <h1>Cloud Asset Storage</h1>
+            <p>Organize, preview, share, and manage digital files and documents.</p>
+          </div>
+          <div class="view-actions">
+            <button id="btn-new-folder" class="btn btn-secondary">
+              <i class="fa-solid fa-folder-plus"></i> New Folder
+            </button>
+            <button id="btn-upload-file" class="btn btn-primary">
+              <i class="fa-solid fa-cloud-arrow-up"></i> Upload File
+            </button>
+          </div>
+        </div>
+
+        <!-- Drive Navigation Toolbar -->
+        <div class="toolbar-bar">
+          <div id="drive-breadcrumbs" class="breadcrumbs">
+            <!-- Rendered by JS -->
+          </div>
+
+          <div class="toolbar-controls">
+            <select id="file-filter-select" class="filter-select">
+              <option value="all">All File Types</option>
+              <option value="document">Documents (.pdf, .doc)</option>
+              <option value="image">Images (.png, .jpg)</option>
+              <option value="video">Videos (.mp4)</option>
+              <option value="code">Code & Configs (.yaml, .js)</option>
+              <option value="archive">Archives (.tar, .zip)</option>
+            </select>
+
+            <div class="view-toggle">
+              <button id="view-grid-btn" class="view-toggle-btn active" title="Grid View">
+                <i class="fa-solid fa-border-all"></i>
+              </button>
+              <button id="view-table-btn" class="view-toggle-btn" title="Table View">
+                <i class="fa-solid fa-list"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Files Content Area -->
+        <div id="files-grid-view" class="files-grid">
+          <!-- Rendered by JS -->
+        </div>
+
+        <div id="files-table-view" style="display: none;">
+          <!-- Rendered by JS -->
+        </div>
+
+        <!-- Empty State -->
+        <div id="files-empty-state" style="display: none; flex-direction: column; align-items: center; justify-content: center; padding: 4rem; text-align: center;">
+          <i class="fa-regular fa-folder-open" style="font-size: 4rem; color: var(--text-muted); margin-bottom: 1rem;"></i>
+          <h3 style="font-size: 1.1rem; color: var(--text-secondary);">No Files Found</h3>
+          <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.25rem;">This folder is empty or no files match your active filter.</p>
+        </div>
+      </div>
+
+      <!-- VIEW 2: Datacenter Server Nodes -->
+      <div id="view-server-nodes" class="view-container">
+        <div class="view-header">
+          <div class="view-title-group">
+            <h1>Datacenter & Volume Pools</h1>
+            <p>Monitor RAID status, NVMe disk health, IOPS metrics, and SAN volume pools.</p>
+          </div>
+          <div class="view-actions">
+            <button class="btn btn-primary" onclick="app.showModal('modal-provision-volume')">
+              <i class="fa-solid fa-plus"></i> Provision Volume Pool
+            </button>
+          </div>
+        </div>
+
+        <div id="server-nodes-grid" class="nodes-grid">
+          <!-- Rendered by JS -->
+        </div>
+      </div>
+
+      <!-- VIEW 3: Physical Warehouse Storage -->
+      <div id="view-warehouse" class="view-container">
+        <div class="view-header">
+          <div class="view-title-group">
+            <h1>Warehouse Rack Locator</h1>
+            <p>Physical bin shelf allocation, hardware SKU tracking, and rack capacity control.</p>
+          </div>
+        </div>
+
+        <div id="warehouse-rack-grid" class="rack-grid">
+          <!-- Rendered by JS -->
+        </div>
+
+        <div id="warehouse-bin-details">
+          <!-- Rendered on bin click -->
+        </div>
+      </div>
+
+      <!-- VIEW 4: Analytics & Quota Center -->
+      <div id="view-analytics" class="view-container">
+        <div class="view-header">
+          <div class="view-title-group">
+            <h1>Analytics & Quota Center</h1>
+            <p>Storage capacity breakdown, growth telemetry, and cleanup recommendations.</p>
+          </div>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon indigo"><i class="fa-solid fa-database"></i></div>
+            <div class="stat-info">
+              <div class="stat-value">2.0 TB</div>
+              <div class="stat-label">Total Allocated Quota</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon cyan"><i class="fa-solid fa-chart-area"></i></div>
+            <div class="stat-info">
+              <div class="stat-value" id="analytics-used-storage">12.95 GB</div>
+              <div class="stat-label">Used Vault Storage</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon emerald"><i class="fa-solid fa-shield-halved"></i></div>
+            <div class="stat-info">
+              <div class="stat-value">100%</div>
+              <div class="stat-label">Data Integrity Score</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon amber"><i class="fa-solid fa-network-wired"></i></div>
+            <div class="stat-info">
+              <div class="stat-value">85 TB</div>
+              <div class="stat-label">Total SAN Infrastructure</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+          <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.25rem;">
+            <h3 style="font-size: 1rem; margin-bottom: 1rem; font-weight: 700;">Storage Distribution by Category</h3>
+            <div style="height: 260px; position: relative;">
+              <canvas id="chart-storage-breakdown"></canvas>
+            </div>
+          </div>
+
+          <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.25rem;">
+            <h3 style="font-size: 1rem; margin-bottom: 1rem; font-weight: 700;">Monthly Storage Growth Trend</h3>
+            <div style="height: 260px; position: relative;">
+              <canvas id="chart-storage-growth"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.25rem;">
+          <h3 style="font-size: 1rem; margin-bottom: 1rem; font-weight: 700;">Largest Files (Cleanup Candidates)</h3>
+          <div id="analytics-largest-files">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+      </div>
+
+      <!-- VIEW 5: Activity Logs -->
+      <div id="view-activities" class="view-container">
+        <div class="view-header">
+          <div class="view-title-group">
+            <h1>Activity Audit Logs</h1>
+            <p>Comprehensive system audit trail of file uploads, volume scrubs, and permissions.</p>
+          </div>
+        </div>
+
+        <div id="activity-log-list">
+          <!-- Rendered by JS -->
+        </div>
+      </div>
+
+      <!-- VIEW 6: Internet Speed Test Center -->
+      <div id="view-speed-test" class="view-container">
+        <div class="view-header">
+          <div class="view-title-group">
+            <h1>Network Speed & Latency Diagnostic Center</h1>
+            <p>Real-time bandwidth throughput, latency roundtrip, jitter analysis, and bufferbloat score.</p>
+          </div>
+          <div class="view-actions">
+            <button id="btn-export-speed-report" class="btn btn-secondary">
+              <i class="fa-solid fa-file-csv"></i> Export CSV Report
+            </button>
+            <button id="btn-start-speedtest" class="btn btn-primary">
+              <i class="fa-solid fa-play"></i> Start Speed Test
+            </button>
+          </div>
+        </div>
+
+        <!-- Speed Test Console Card -->
+        <div class="speedtest-console-card">
+          <div class="speedtest-layout-grid">
+            
+            <!-- Speedometer Dial Container -->
+            <div class="speedometer-container">
+              <div class="speedometer-wrapper">
+                <div class="speedometer-pulse-glow"></div>
+                <canvas id="speedometer-canvas"></canvas>
+              </div>
+              <div style="text-align: center; margin-top: -10px;">
+                <div id="speedtest-status-main" style="font-weight: 700; font-size: 1rem; color: var(--accent-primary);">READY FOR DIAGNOSTIC SCAN</div>
+                <div id="speedtest-status-sub" style="font-size: 0.78rem; color: var(--text-muted); margin-top: 2px;">Select server region and press Start</div>
+              </div>
+            </div>
+
+            <!-- Controls & Live Metrics Column -->
+            <div>
+              <!-- Controls Bar -->
+              <div class="speedtest-controls-bar">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                  <span style="font-size: 0.85rem; font-weight: 600; color: var(--text-secondary);">Target Endpoint:</span>
+                  <select id="speedtest-server-select" class="filter-select" style="max-width: 220px;">
+                    <option value="cloudflare">Cloudflare Edge (Auto)</option>
+                    <option value="aws">AWS US-East (N. Virginia)</option>
+                    <option value="fastly">Fastly Global CDN Node</option>
+                    <option value="local-san">Datacenter NVMe SAN Pool</option>
+                  </select>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                  <span style="font-size: 0.85rem; font-weight: 600; color: var(--text-secondary);">Test Duration:</span>
+                  <div class="preset-btn-group">
+                    <button class="speedtest-preset-btn" data-duration="5">Quick (5s)</button>
+                    <button class="speedtest-preset-btn active" data-duration="10">Standard (10s)</button>
+                    <button class="speedtest-preset-btn" data-duration="20">Stress (20s)</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Speed Metrics Cards Grid -->
+              <div class="speed-metrics-grid" style="margin-top: 1.25rem;">
+                <div class="speed-metric-card">
+                  <i class="fa-solid fa-arrow-down-long speed-metric-icon"></i>
+                  <div>
+                    <span id="speed-metric-download-val" class="speed-metric-val">--</span>
+                    <span id="speed-metric-download-unit" class="speed-metric-unit">Mbps</span>
+                  </div>
+                  <div class="speed-metric-label">Download Speed</div>
+                </div>
+
+                <div class="speed-metric-card">
+                  <i class="fa-solid fa-arrow-up-long speed-metric-icon" style="color: var(--accent-secondary);"></i>
+                  <div>
+                    <span id="speed-metric-upload-val" class="speed-metric-val">--</span>
+                    <span id="speed-metric-upload-unit" class="speed-metric-unit">Mbps</span>
+                  </div>
+                  <div class="speed-metric-label">Upload Speed</div>
+                </div>
+
+                <div class="speed-metric-card">
+                  <i class="fa-solid fa-bolt speed-metric-icon" style="color: var(--success);"></i>
+                  <div>
+                    <span id="speed-metric-ping-val" class="speed-metric-val">--</span>
+                    <span id="speed-metric-ping-unit" class="speed-metric-unit">ms</span>
+                  </div>
+                  <div class="speed-metric-label">Latency (Ping)</div>
+                </div>
+
+                <div class="speed-metric-card">
+                  <i class="fa-solid fa-wave-square speed-metric-icon" style="color: var(--warning);"></i>
+                  <div>
+                    <span id="speed-metric-jitter-val" class="speed-metric-val">--</span>
+                    <span id="speed-metric-jitter-unit" class="speed-metric-unit">ms</span>
+                  </div>
+                  <div class="speed-metric-label">Jitter Stability</div>
+                </div>
+
+                <div class="speed-metric-card">
+                  <i class="fa-solid fa-award speed-metric-icon" style="color: #a855f7;"></i>
+                  <div>
+                    <span id="speed-metric-grade-val" class="speed-metric-val">--</span>
+                    <span id="speed-metric-grade-unit" class="speed-metric-unit"></span>
+                  </div>
+                  <div class="speed-metric-label">Network Rating</div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Telemetry Graph & ISP Info Row -->
+        <div class="speedtest-telemetry-container">
+          <!-- Realtime Chart -->
+          <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.25rem;">
+            <h3 style="font-size: 1rem; margin-bottom: 1rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
+              <i class="fa-solid fa-chart-line text-accent"></i> Real-Time Bandwidth Telemetry
+            </h3>
+            <div style="height: 240px; position: relative;">
+              <canvas id="speedtest-chart"></canvas>
+            </div>
+          </div>
+
+          <!-- Network & Client Info -->
+          <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.25rem; display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+              <h3 style="font-size: 1rem; margin-bottom: 1rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
+                <i class="fa-solid fa-network-wired text-secondary"></i> Client Diagnostics
+              </h3>
+              
+              <div class="client-info-list">
+                <div class="client-info-item">
+                  <span class="client-info-label"><i class="fa-solid fa-globe"></i> Client Public IP:</span>
+                  <span id="speedtest-client-ip" class="client-info-val">Detecting...</span>
+                </div>
+                <div class="client-info-item">
+                  <span class="client-info-label"><i class="fa-solid fa-building"></i> Network Provider / ISP:</span>
+                  <span id="speedtest-client-isp" class="client-info-val">Detecting...</span>
+                </div>
+                <div class="client-info-item">
+                  <span class="client-info-label"><i class="fa-solid fa-location-dot"></i> Edge Region:</span>
+                  <span id="speedtest-client-loc" class="client-info-val">Detecting...</span>
+                </div>
+                <div class="client-info-item">
+                  <span class="client-info-label"><i class="fa-solid fa-wifi"></i> Interface Type:</span>
+                  <span class="client-info-val" style="color: var(--success);">Gigabit Ethernet / Wi-Fi 6</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Mini Summary Quick Stats -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-top: 1rem; padding-top: 0.75rem; border-top: 1px solid var(--border-color);">
+              <div style="background: var(--bg-secondary); padding: 0.6rem; border-radius: var(--radius-sm); text-align: center;">
+                <div style="font-size: 0.72rem; color: var(--text-muted);">Avg Download</div>
+                <div id="stat-speed-avg-down" style="font-weight: 700; font-size: 0.95rem; color: var(--accent-primary);">--</div>
+              </div>
+              <div style="background: var(--bg-secondary); padding: 0.6rem; border-radius: var(--radius-sm); text-align: center;">
+                <div style="font-size: 0.72rem; color: var(--text-muted);">Peak Speed</div>
+                <div id="stat-speed-max-down" style="font-weight: 700; font-size: 0.95rem; color: var(--success);">--</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- History Table -->
+        <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.25rem;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+            <h3 style="font-size: 1rem; font-weight: 700;">Speed Test Run History</h3>
+            <button id="btn-clear-speed-history" class="btn btn-secondary text-danger" style="padding: 0.35rem 0.75rem; font-size: 0.78rem;">
+              <i class="fa-solid fa-trash-can"></i> Clear History
+            </button>
+          </div>
+
+          <div style="overflow-x: auto;">
+            <table class="files-table" style="width: 100%;">
+              <thead>
+                <tr>
+                  <th>Timestamp</th>
+                  <th>Server Node</th>
+                  <th>Download</th>
+                  <th>Upload</th>
+                  <th>Latency (Ping)</th>
+                  <th>Grade</th>
+                </tr>
+              </thead>
+              <tbody id="speedtest-history-tbody">
+                <!-- Rendered by JS -->
+              </tbody>
+            </table>
+          </div>
+
+          <!-- History Empty State -->
+          <div id="speedtest-history-empty" style="display: none; flex-direction: column; align-items: center; padding: 2.5rem; text-align: center;">
+            <i class="fa-solid fa-gauge-high" style="font-size: 2.5rem; color: var(--text-muted); margin-bottom: 0.5rem;"></i>
+            <div style="color: var(--text-secondary); font-weight: 600;">No Speed Test History</div>
+            <div style="font-size: 0.8rem; color: var(--text-muted);">Run your first speed test scan above to record network telemetry.</div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- MODALS -->
+
+  <!-- Modal 1: Create Folder -->
+  <div id="modal-create-folder" class="modal-overlay">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>Create New Folder</h3>
+        <button class="modal-close-btn" data-close-modal="modal-create-folder"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <form id="form-create-folder">
+        <div class="form-group">
+          <label class="form-label">Folder Name</label>
+          <input type="text" id="input-folder-name" class="form-input" placeholder="e.g. Marketing Assets" required />
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.5rem;">
+          <button type="button" class="btn btn-secondary" data-close-modal="modal-create-folder">Cancel</button>
+          <button type="submit" class="btn btn-primary">Create Folder</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 2: Upload File -->
+  <div id="modal-upload-file" class="modal-overlay">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>Upload File Asset</h3>
+        <button class="modal-close-btn" data-close-modal="modal-upload-file"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <form id="form-upload-file">
+        <div class="dropzone" id="upload-dropzone">
+          <i class="fa-solid fa-cloud-arrow-up dropzone-icon"></i>
+          <div style="font-weight: 600; font-size: 0.95rem;">Drag & Drop real files here or click to browse</div>
+          <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 0.35rem;">Supports Images, PDFs, Videos, Documents, Code, Archives (Any file size)</div>
+          <div id="upload-file-status" style="margin-top: 0.75rem; font-size: 0.85rem; font-weight: 600; color: var(--accent-primary);"></div>
+        </div>
+
+        <div class="form-group" style="margin-top: 1.25rem;">
+          <label class="form-label">File Display Name</label>
+          <input type="text" id="input-upload-name" class="form-input" placeholder="Select a file or enter name..." required />
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div class="form-group">
+            <label class="form-label">Category Type</label>
+            <select id="select-upload-type" class="form-select">
+              <option value="document">Document (.pdf, .txt, .doc)</option>
+              <option value="image">Image (.png, .jpg, .svg, .gif)</option>
+              <option value="video">Video (.mp4, .webm)</option>
+              <option value="code">Code / Config (.js, .html, .json, .yaml)</option>
+              <option value="archive">Archive (.zip, .tar, .gz)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Tag / Label</label>
+            <input type="text" id="input-upload-tag" class="form-input" placeholder="e.g. Production" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">File Text/Code Content or Custom Notes</label>
+          <textarea id="input-upload-content" class="form-textarea" rows="3" placeholder="Enter text content for previewer or leave blank for uploaded binary files..."></textarea>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.5rem;">
+          <button type="button" class="btn btn-secondary" data-close-modal="modal-upload-file">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save to Storage</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 3: File Previewer & Editor -->
+  <div id="modal-file-preview" class="modal-overlay">
+    <div class="modal-box" style="max-width: 680px;">
+      <div class="modal-header">
+        <h3 id="modal-preview-title">File Preview</h3>
+        <button class="modal-close-btn" data-close-modal="modal-file-preview"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div id="modal-preview-media" class="preview-media-container">
+        <!-- Rendered by JS -->
+      </div>
+
+      <div id="modal-preview-details">
+        <!-- Rendered by JS -->
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.25rem;">
+        <button type="button" id="btn-save-preview-content" class="btn btn-primary" style="display: none;">
+          <i class="fa-solid fa-floppy-disk"></i> Save Content Changes
+        </button>
+        <button type="button" class="btn btn-secondary" data-close-modal="modal-file-preview">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 4: Share Link -->
+  <div id="modal-share-file" class="modal-overlay">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>Share File & Permissions</h3>
+        <button class="modal-close-btn" data-close-modal="modal-share-file"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Secure Access Link</label>
+        <div style="display: flex; gap: 0.5rem;">
+          <input type="text" id="share-link-input" class="form-input" readonly />
+          <button type="button" class="btn btn-primary btn-sm" onclick="navigator.clipboard.writeText(document.getElementById('share-link-input').value); app.showToast('Link copied to clipboard!', 'success');">
+            Copy
+          </button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Access Level</label>
+        <select class="form-select">
+          <option>Read Only (Viewer)</option>
+          <option>Editor (Can Modify)</option>
+          <option>Restricted (Specified Domains Only)</option>
+        </select>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; margin-top: 1.5rem;">
+        <button type="button" class="btn btn-secondary" data-close-modal="modal-share-file">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 5: Datacenter Pool Provisioning -->
+  <div id="modal-provision-volume" class="modal-overlay">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>Provision Volume Pool</h3>
+        <button class="modal-close-btn" data-close-modal="modal-provision-volume"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <form id="form-provision-volume">
+        <div class="form-group">
+          <label class="form-label">Volume Pool Name</label>
+          <input type="text" id="input-vol-name" class="form-input" placeholder="e.g. US-West Ultra NVMe Cluster" required />
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div class="form-group">
+            <label class="form-label">Storage Architecture</label>
+            <select id="select-vol-type" class="form-select">
+              <option value="NVMe RAID 10">NVMe RAID 10</option>
+              <option value="HDD RAID 6">HDD RAID 6</option>
+              <option value="Fiber Channel SAN">Fiber Channel SAN</option>
+              <option value="Ceph Distributed Pool">Ceph Distributed Pool</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Total Capacity (TB)</label>
+            <input type="number" id="input-vol-capacity" class="form-input" placeholder="e.g. 20" min="1" step="1" required />
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div class="form-group">
+            <label class="form-label">Expected Read IOPS</label>
+            <input type="number" id="input-vol-read" class="form-input" value="85000" required />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Expected Write IOPS</label>
+            <input type="number" id="input-vol-write" class="form-input" value="62000" required />
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.5rem;">
+          <button type="button" class="btn btn-secondary" data-close-modal="modal-provision-volume">Cancel</button>
+          <button type="submit" class="btn btn-primary">Provision Storage Pool</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 6: Warehouse Bin Stocking -->
+  <div id="modal-stock-bin" class="modal-overlay">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 id="modal-stock-title">Stock Warehouse Bin Slot</h3>
+        <button class="modal-close-btn" data-close-modal="modal-stock-bin"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <form id="form-stock-bin">
+        <input type="hidden" id="input-bin-rack-id" />
+        <input type="hidden" id="input-bin-key" />
+
+        <div class="form-group">
+          <label class="form-label">Item SKU Code</label>
+          <input type="text" id="input-bin-sku" class="form-input" placeholder="e.g. SKU-NVME-4TB" required />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Hardware Item Description</label>
+          <input type="text" id="input-bin-name" class="form-input" placeholder="e.g. PCIe Gen5 4TB NVMe Module" required />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Stock Quantity (Units)</label>
+          <input type="number" id="input-bin-qty" class="form-input" placeholder="e.g. 50" min="1" required />
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1.5rem;">
+          <button type="button" id="btn-clear-bin" class="btn btn-secondary text-danger"><i class="fa-solid fa-trash-can"></i> Clear Bin Slot</button>
+          <div style="display: flex; gap: 0.75rem;">
+            <button type="button" class="btn btn-secondary" data-close-modal="modal-stock-bin">Cancel</button>
+            <button type="submit" class="btn btn-primary">Save Bin Stock</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Add New Payment Beneficiary / Payee -->
+  <div id="modal-add-payee" class="modal-overlay">
+    <div class="modal-box modal-lg">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-user-plus"></i> Add New Payee to Directory</h3>
+        <button class="modal-close-btn" data-close-modal="modal-add-payee"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <form id="form-add-payee">
+        <div class="modal-grid-2col">
+          <div class="form-group">
+            <label class="form-label">Full Name / Entity Name *</label>
+            <input type="text" id="payee-input-name" class="form-input" placeholder="e.g. Acme Tech Corporation" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Company / Organization</label>
+            <input type="text" id="payee-input-company" class="form-input" placeholder="e.g. Acme Inc." />
+          </div>
+        </div>
+
+        <div class="modal-grid-2col">
+          <div class="form-group">
+            <label class="form-label">Email Address *</label>
+            <input type="email" id="payee-input-email" class="form-input" placeholder="finance@acme.com" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Phone Number</label>
+            <input type="text" id="payee-input-phone" class="form-input" placeholder="+1 (555) 000-0000" />
+          </div>
+        </div>
+
+        <div class="modal-grid-3col">
+          <div class="form-group">
+            <label class="form-label">Directory Category *</label>
+            <select id="payee-select-category" class="form-input">
+              <option value="Vendor">Vendor</option>
+              <option value="Payroll">Payroll</option>
+              <option value="Contractor">Contractor</option>
+              <option value="Subscription">Subscription</option>
+              <option value="Utility">Utility</option>
+              <option value="Tax">Tax & Gov</option>
+              <option value="Merchant">Merchant</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Account Status</label>
+            <select id="payee-select-status" class="form-input">
+              <option value="Active">Active</option>
+              <option value="Verified">Verified</option>
+              <option value="Pending">Pending</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Default Currency</label>
+            <select id="payee-select-currency" class="form-input">
+              <option value="INR" selected>INR (₹)</option>
+              <option value="USD">USD ($)</option>
+              <option value="EUR">EUR (€)</option>
+              <option value="GBP">GBP (£)</option>
+              <option value="JPY">JPY (¥)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-section-title"><i class="fa-solid fa-building-columns"></i> Banking & Settlement Details</div>
+
+        <div class="modal-grid-2col">
+          <div class="form-group">
+            <label class="form-label">Bank Name</label>
+            <input type="text" id="payee-input-bank" class="form-input" placeholder="e.g. HDFC Bank / ICICI" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Account Holder Name</label>
+            <input type="text" id="payee-input-acc-name" class="form-input" placeholder="e.g. Acme Tech Inc." />
+          </div>
+        </div>
+
+        <div class="modal-grid-2col">
+          <div class="form-group">
+            <label class="form-label">Account / Card Number</label>
+            <input type="text" id="payee-input-acc-num" class="form-input" placeholder="Account or card #" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">IBAN Number</label>
+            <input type="text" id="payee-input-iban" class="form-input" placeholder="e.g. IN98HDFC121000358..." />
+          </div>
+        </div>
+
+        <div class="modal-grid-3col">
+          <div class="form-group">
+            <label class="form-label">SWIFT / BIC Code</label>
+            <input type="text" id="payee-input-swift" class="form-input" placeholder="e.g. HDFCINBBXXX" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Routing / IFSC Code</label>
+            <input type="text" id="payee-input-routing" class="form-input" placeholder="IFSC Code e.g. HDFC0000240" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">UPI ID / FastPay Handle</label>
+            <input type="text" id="payee-input-upi" class="form-input" placeholder="acme@icici" />
+          </div>
+        </div>
+
+        <div class="modal-grid-3col">
+          <div class="form-group">
+            <label class="form-label">Tax ID / PAN / GST</label>
+            <input type="text" id="payee-input-taxid" class="form-input" placeholder="e.g. 27AAACA9876B1Z2" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Max Payout Limit (₹)</label>
+            <input type="number" id="payee-input-limit" class="form-input" placeholder="500000" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Risk Rating</label>
+            <select id="payee-select-risk" class="form-input">
+              <option value="Low">Low Risk</option>
+              <option value="Medium">Medium Risk</option>
+              <option value="High">High Risk</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Avatar Image URL (Optional)</label>
+          <input type="url" id="payee-input-avatar" class="form-input" placeholder="https://..." />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Notes & Comments</label>
+          <textarea id="payee-input-notes" class="form-input" rows="2" placeholder="Payee notes..."></textarea>
+        </div>
+
+        <div class="modal-actions" style="margin-top: 1.5rem;">
+          <button type="button" class="btn btn-secondary" data-close-modal="modal-add-payee">Cancel</button>
+          <button type="submit" class="btn btn-primary"><i class="fa-solid fa-check"></i> Register Payee</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Instant Disbursement / Send Payment -->
+  <div id="modal-send-payment" class="modal-overlay">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-paper-plane"></i> Execute Instant Payout</h3>
+        <button class="modal-close-btn" data-close-modal="modal-send-payment"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <form id="form-send-payment">
+        <input type="hidden" id="payout-input-payee-id" />
+
+        <div class="payee-summary-badge" style="background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 10px; margin-bottom: 1.25rem;">
+          <div class="text-muted" style="font-size: 0.85rem;">Target Payee</div>
+          <h3 id="payout-payee-name-display" style="color: var(--accent-primary);">Payee Name</h3>
+          <div style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.25rem;">
+            Preferred Route: <span id="payout-payee-method-display">Bank Wire</span>
+          </div>
+        </div>
+
+        <div class="modal-grid-2col">
+          <div class="form-group">
+            <label class="form-label">Payout Amount *</label>
+            <input type="number" step="0.01" id="payout-input-amount" class="form-input" placeholder="0.00" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Currency *</label>
+            <select id="payout-select-currency" class="form-input">
+              <option value="INR" selected>INR (₹)</option>
+              <option value="USD">USD ($)</option>
+              <option value="EUR">EUR (€)</option>
+              <option value="GBP">GBP (£)</option>
+              <option value="JPY">JPY (¥)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Source Treasury Gateway *</label>
+          <select id="payout-select-gateway" class="form-input">
+            <!-- Populated by JS -->
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Disbursement Description / Invoice Reference</label>
+          <input type="text" id="payout-input-notes" class="form-input" placeholder="e.g. September Infrastructure Payout #INV-9021" />
+        </div>
+
+        <div style="font-size: 0.8rem; color: var(--text-muted); background: rgba(16, 185, 129, 0.1); padding: 0.75rem; border-radius: 8px; margin-top: 0.5rem;">
+          <i class="fa-solid fa-shield-halved"></i> Transaction will be processed instantly and logged directly into the system ledger.
+        </div>
+
+        <div class="modal-actions" style="margin-top: 1.5rem;">
+          <button type="button" class="btn btn-secondary" data-close-modal="modal-send-payment">Cancel</button>
+          <button type="submit" class="btn btn-primary"><i class="fa-solid fa-bolt"></i> Disburse Funds Now</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Payee Ledger & Details Profile -->
+  <div id="modal-payee-details" class="modal-overlay">
+    <div class="modal-box modal-lg">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-id-card"></i> Beneficiary Profile & Ledger</h3>
+        <button class="modal-close-btn" data-close-modal="modal-payee-details"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div id="payee-details-modal-body">
+        <!-- Rendered dynamically by JS -->
+      </div>
+      <div class="modal-actions" style="margin-top: 1.5rem;">
+        <button type="button" class="btn btn-secondary" data-close-modal="modal-payee-details">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- JS Scripts -->
+  <script src="js/state.js"></script>
+  <script src="js/cloud-drive.js"></script>
+  <script src="js/server-volumes.js"></script>
+  <script src="js/warehouse.js"></script>
+  <script src="js/analytics.js"></script>
+  <script src="js/speed-test.js"></script>
+  <script src="js/payment-directory.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
