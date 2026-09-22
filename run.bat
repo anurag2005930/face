@@ -1,20 +1,18 @@
 @echo off
-title AURA-Sense Facial Emotion Detection System
-echo ============================================================
-echo   AURA-SENSE: Real-Time AI Facial Emotion Detection System
-echo ============================================================
+title Synapse Biometric AI - Face & Hand Detection
+echo ================================================================
+echo    SYNAPSE BIOMETRIC AI - FACE & HAND MOTION DETECTION SYSTEM
+echo ================================================================
 echo.
-cd /d "%~dp0backend"
+echo [1/2] Checking Python environment...
+python --version >nul 2>&1
+if errorlevel 1 (
+    echo [ERROR] Python is not found in PATH! Please install Python.
+    pause
+    exit /b 1
+)
 
-echo Checking Python dependencies...
-python -m pip install -r requirements.txt --quiet
-
-echo.
-echo [1/2] Starting Python FastAPI & Computer Vision Engine...
-echo [2/2] Opening Dashboard in default browser: http://localhost:8000
-echo.
-
-start "" cmd /c "timeout /t 2 /nobreak >nul && start http://localhost:8000"
-python -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload
-
+echo [2/2] Launching Biometric AI Server on http://localhost:8000 ...
+start "" http://localhost:8000
+python server.py
 pause
