@@ -107,10 +107,11 @@ async def serve_file(full_path: str):
     return HTMLResponse("<h1>Not found</h1>", status_code=404)
 
 if __name__ == "__main__":
-    host = os.environ.get("HOST", "127.0.0.1")
+    default_host = "0.0.0.0" if os.environ.get("CODESPACES") == "true" else "127.0.0.1"
+    host = os.environ.get("HOST", default_host)
     port = int(os.environ.get("PORT", 8000))
     print(f"==================================================")
     print(f"   BIOMETRIC AI FACE & HAND DETECTION SYSTEM")
-    print(f"   Running on: http://localhost:{port}")
+    print(f"   Running on: http://{host}:{port}")
     print(f"==================================================")
     uvicorn.run("server.py:app" if len(sys.argv) > 1 and sys.argv[1] == "--reload" else app, host=host, port=port)
