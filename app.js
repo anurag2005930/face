@@ -1176,7 +1176,7 @@ class BiometricApp {
     try {
       // 1. Face Mesh
       this.faceMesh = new FaceMesh({
-        locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`
+        locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/${file}`
       });
       this.faceMesh.setOptions({
         maxNumFaces: 1,
@@ -1217,7 +1217,7 @@ class BiometricApp {
 
       // 2. Hands
       this.hands = new Hands({
-        locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+        locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/${file}`
       });
       this.hands.setOptions({
         maxNumHands: 2,
