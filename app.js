@@ -144,6 +144,16 @@ function angleDegrees(x1, y1, x2, y2) {
 // FACE EMOTION CLASSIFIER
 // ==========================================
 class FaceEmotionEngine {
+  constructor() {
+    this.baseline = null;
+    this.calibrationFrames = 0;
+  }
+
+  resetCalibration() {
+    this.baseline = null;
+    this.calibrationFrames = 0;
+  }
+
   classify(landmarks, width, height) {
     if (!landmarks || landmarks.length < 468) return null;
 
@@ -218,6 +228,33 @@ class FaceEmotionEngine {
       mouthAperture: mouthOpenPct
     };
 
+    const currentMetrics = {
+      cornerElevation,
+      mouthAperture,
+      avgEAR,
+      avgBrowElevation,
+      innerBrowDist,
+      sadBrowRatio,
+      noseToLip
+    };
+    if (!this.baseline) {
+      this.baseline = currentMetrics;
+    } else if (this.calibrationFrames < 45) {
+      const calibrationAlpha = 0.08;
+      for (const key of Object.keys(currentMetrics)) {
+        this.baseline[key] = (calibrationAlpha * currentMetrics[key]) + ((1 - calibrationAlpha) * this.baseline[key]);
+      }
+    }
+    this.calibrationFrames++;
+
+    const smileDelta = cornerElevation - this.baseline.cornerElevation;
+    const mouthDelta = mouthAperture - this.baseline.mouthAperture;
+    const eyeDelta = avgEAR - this.baseline.avgEAR;
+    const browDelta = avgBrowElevation - this.baseline.avgBrowElevation;
+    const browFurrowDelta = this.baseline.innerBrowDist - innerBrowDist;
+    const sadBrowDelta = sadBrowRatio - this.baseline.sadBrowRatio;
+    const noseDelta = this.baseline.noseToLip - noseToLip;
+
     // Calculate raw emotion confidence scores
     let joy = 0;
     let surprise = 0;
@@ -228,38 +265,38 @@ class FaceEmotionEngine {
     let neutral = 0;
 
     // JOY / HAPPINESS
-    if (cornerElevation > 0.012 || (mouthWidth > 0.45 && cornerElevation > 0.005)) {
-      const smileScore = (cornerElevation - 0.005) * 28 + (mouthWidth - 0.38) * 3;
+    if (smileDelta > 0.008 || (mouthWidth > 0.45 && smileDelta > 0.004)) {
+      const smileScore = smileDelta * 30 + Math.max(0, mouthWidth - 0.38) * 2;
       joy = Math.min(1, Math.max(0, smileScore));
     }
 
     // SURPRISE
-    if (mouthAperture > 0.045 && avgBrowElevation > 0.18) {
-      const surpriseScore = (mouthAperture - 0.035) * 14 + (avgBrowElevation - 0.17) * 8 + (avgEAR - 0.28) * 4;
+    if (mouthDelta > 0.012 && browDelta > 0.018 && eyeDelta > 0.015) {
+      const surpriseScore = mouthDelta * 16 + browDelta * 8 + eyeDelta * 4;
       surprise = Math.min(1, Math.max(0, surpriseScore));
     }
 
     // SADNESS
-    if (cornerElevation < -0.018 || (sadBrowRatio > 0.04 && cornerElevation < -0.005)) {
-      const sadScore = (-cornerElevation - 0.01) * 22 + Math.max(0, sadBrowRatio) * 6;
+    if (smileDelta < -0.012 || (sadBrowDelta > 0.018 && smileDelta < -0.004)) {
+      const sadScore = (-smileDelta) * 24 + Math.max(0, sadBrowDelta) * 8;
       sadness = Math.min(1, Math.max(0, sadScore));
     }
 
     // ANGER
-    if (innerBrowDist < 0.28 && avgBrowElevation < 0.19 && joy < 0.15) {
-      const angerScore = (0.30 - innerBrowDist) * 16 + (0.20 - avgBrowElevation) * 10;
+    if (browFurrowDelta > 0.018 && browDelta < 0.018 && smileDelta < 0.006) {
+      const angerScore = browFurrowDelta * 18 + Math.max(0, -browDelta) * 8;
       anger = Math.min(1, Math.max(0, angerScore));
     }
 
     // FEAR / AWE
-    if (avgEAR > 0.34 && avgBrowElevation > 0.20 && innerBrowDist < 0.31 && joy < 0.2) {
-      const fearScore = (avgEAR - 0.30) * 10 + (avgBrowElevation - 0.19) * 8;
+    if (eyeDelta > 0.025 && browDelta > 0.018 && smileDelta < 0.008) {
+      const fearScore = eyeDelta * 10 + browDelta * 8;
       fear = Math.min(1, Math.max(0, fearScore));
     }
 
     // DISGUST
-    if (noseToLip < 0.095 && cornerElevation < 0.008 && joy < 0.2) {
-      const disgustScore = (0.11 - noseToLip) * 18 + (innerBrowDist < 0.29 ? 0.2 : 0);
+    if (noseDelta > 0.008 && smileDelta < 0.008) {
+      const disgustScore = noseDelta * 18 + Math.max(0, browFurrowDelta) * 2;
       disgust = Math.min(1, Math.max(0, disgustScore));
     }
 
@@ -1174,6 +1211,7 @@ class BiometricApp {
         } else {
           state.faceDetected = false;
           this.latestFaceLandmarks = null;
+          emotionEngine.resetCalibration();
         }
       });
 
