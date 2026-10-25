@@ -46,6 +46,8 @@ const state = {
   
   // Face & Emotion state
   faceDetected: false,
+  faceModelStatus: 'LOADING',
+  handModelStatus: 'LOADING',
   faceBox: null,
   rawEmotions: { joy: 0, surprise: 0, neutral: 1, sadness: 0, anger: 0, fear: 0, disgust: 0 },
   smoothedEmotions: { joy: 0, surprise: 0, neutral: 1, sadness: 0, anger: 0, fear: 0, disgust: 0 },
@@ -831,6 +833,7 @@ class UIController {
   cacheElements() {
     this.elements = {
       fpsDisplay: document.getElementById('fps-display'),
+      engineStatus: document.getElementById('engine-status'),
       dominantBadge: document.getElementById('dominant-badge'),
       dominantAvatar: document.getElementById('dominant-avatar'),
       dominantName: document.getElementById('dominant-name'),
@@ -888,6 +891,19 @@ class UIController {
 
     // FPS
     el.fpsDisplay.textContent = `${state.fps} FPS`;
+    if (el.engineStatus) {
+      if (state.faceModelStatus === 'ERROR' || state.handModelStatus === 'ERROR') {
+        el.engineStatus.textContent = 'MODEL ERROR - CHECK CONSOLE';
+      } else if (state.faceModelStatus === 'NO FACE' && state.handModelStatus === 'NO HAND') {
+        el.engineStatus.textContent = 'TRACKING - NO FACE OR HAND';
+      } else if (state.faceModelStatus === 'NO FACE') {
+        el.engineStatus.textContent = 'TRACKING - NO FACE';
+      } else if (state.handModelStatus === 'NO HAND') {
+        el.engineStatus.textContent = 'TRACKING - NO HAND';
+      } else {
+        el.engineStatus.textContent = 'VISION ENGINE: TRACKING';
+      }
+    }
 
     // Dominant Emotion
     const dom = state.dominantEmotion;
@@ -1047,6 +1063,8 @@ class BiometricApp {
     this.isHandsProcessing = false;
     this.faceInferenceFailed = false;
     this.handsInferenceFailed = false;
+    this.lastFaceInferenceTime = 0;
+    this.lastHandsInferenceTime = 0;
     this.cameraRequestId = 0;
     
     this.latestFaceLandmarks = null;
@@ -1175,6 +1193,8 @@ class BiometricApp {
   }
 
   async initMediaPipe() {
+    state.faceModelStatus = 'LOADING';
+    state.handModelStatus = 'LOADING';
     try {
       // 1. Face Mesh
       this.faceMesh = new FaceMesh({
@@ -1188,8 +1208,10 @@ class BiometricApp {
       });
       this.faceMesh.onResults((results) => {
         this.isFaceProcessing = false;
+        state.faceModelStatus = 'READY';
         if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
           state.faceDetected = true;
+          state.faceModelStatus = 'TRACKING';
           this.latestFaceLandmarks = results.multiFaceLandmarks[0];
 
           // Compute emotions
@@ -1212,6 +1234,7 @@ class BiometricApp {
           }
         } else {
           state.faceDetected = false;
+          state.faceModelStatus = 'NO FACE';
           this.latestFaceLandmarks = null;
           emotionEngine.resetCalibration();
         }
@@ -1229,7 +1252,9 @@ class BiometricApp {
       });
       this.hands.onResults((results) => {
         this.isHandsProcessing = false;
+        state.handModelStatus = 'READY';
         if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+          state.handModelStatus = 'TRACKING';
           this.latestHands = results.multiHandLandmarks;
           this.latestHandedness = results.multiHandedness || [];
 
@@ -1252,6 +1277,7 @@ class BiometricApp {
           // Update motion speed & direction
           handEngine.updateMotion(this.latestHands, this.canvas.width, this.canvas.height);
         } else {
+          state.handModelStatus = 'NO HAND';
           this.latestHands = [];
           this.latestHandedness = [];
           state.handsDetected = [];
@@ -1265,6 +1291,8 @@ class BiometricApp {
       ui.showToast('MediaPipe Face & Hand AI Engines Ready', 'success');
       return true;
     } catch (e) {
+      state.faceModelStatus = 'ERROR';
+      state.handModelStatus = 'ERROR';
       console.error("MediaPipe initialization error:", e);
       ui.showToast('AI Model initialization failed. Check internet connection.', 'error');
       return false;
@@ -1351,21 +1379,25 @@ class BiometricApp {
         );
 
         // Send frames to MediaPipe asynchronously
-        if (this.faceMesh && !this.faceInferenceFailed && !this.isFaceProcessing) {
+        if (this.faceMesh && !this.faceInferenceFailed && !this.isFaceProcessing && now - this.lastFaceInferenceTime >= 66) {
+          this.lastFaceInferenceTime = now;
           this.isFaceProcessing = true;
           this.faceMesh.send({ image: this.video }).catch((error) => {
             this.isFaceProcessing = false;
             this.faceInferenceFailed = true;
+            state.faceModelStatus = 'ERROR';
             console.error('Face model inference failed:', error);
             ui.showToast('Face AI model failed to load. Check the network tab.', 'error');
           });
         }
 
-        if (this.hands && !this.handsInferenceFailed && !this.isHandsProcessing) {
+        if (this.hands && !this.handsInferenceFailed && !this.isHandsProcessing && now - this.lastHandsInferenceTime >= 66) {
+          this.lastHandsInferenceTime = now;
           this.isHandsProcessing = true;
           this.hands.send({ image: this.video }).catch((error) => {
             this.isHandsProcessing = false;
             this.handsInferenceFailed = true;
+            state.handModelStatus = 'ERROR';
             console.error('Hands model inference failed:', error);
             ui.showToast('Hands AI model failed to load. Check the network tab.', 'error');
           });
