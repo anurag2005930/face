@@ -1045,6 +1045,8 @@ class BiometricApp {
     
     this.isFaceProcessing = false;
     this.isHandsProcessing = false;
+    this.faceInferenceFailed = false;
+    this.handsInferenceFailed = false;
     this.cameraRequestId = 0;
     
     this.latestFaceLandmarks = null;
@@ -1349,14 +1351,24 @@ class BiometricApp {
         );
 
         // Send frames to MediaPipe asynchronously
-        if (this.faceMesh && !this.isFaceProcessing) {
+        if (this.faceMesh && !this.faceInferenceFailed && !this.isFaceProcessing) {
           this.isFaceProcessing = true;
-          this.faceMesh.send({ image: this.video }).catch(() => { this.isFaceProcessing = false; });
+          this.faceMesh.send({ image: this.video }).catch((error) => {
+            this.isFaceProcessing = false;
+            this.faceInferenceFailed = true;
+            console.error('Face model inference failed:', error);
+            ui.showToast('Face AI model failed to load. Check the network tab.', 'error');
+          });
         }
 
-        if (this.hands && !this.isHandsProcessing) {
+        if (this.hands && !this.handsInferenceFailed && !this.isHandsProcessing) {
           this.isHandsProcessing = true;
-          this.hands.send({ image: this.video }).catch(() => { this.isHandsProcessing = false; });
+          this.hands.send({ image: this.video }).catch((error) => {
+            this.isHandsProcessing = false;
+            this.handsInferenceFailed = true;
+            console.error('Hands model inference failed:', error);
+            ui.showToast('Hands AI model failed to load. Check the network tab.', 'error');
+          });
         }
 
         // Update UI
