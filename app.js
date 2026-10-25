@@ -1008,6 +1008,7 @@ class BiometricApp {
     
     this.isFaceProcessing = false;
     this.isHandsProcessing = false;
+    this.cameraRequestId = 0;
     
     this.latestFaceLandmarks = null;
     this.latestHands = [];
@@ -1228,8 +1229,11 @@ class BiometricApp {
   }
 
   async startCamera(deviceId = '') {
+    const requestId = ++this.cameraRequestId;
+    state.cameraActive = false;
     if (state.stream) {
       state.stream.getTracks().forEach(t => t.stop());
+      state.stream = null;
     }
 
     const constraints = {
@@ -1244,12 +1248,22 @@ class BiometricApp {
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      if (requestId !== this.cameraRequestId) {
+        stream.getTracks().forEach(t => t.stop());
+        return;
+      }
+
       state.stream = stream;
       this.video.srcObject = stream;
 
       await new Promise((resolve) => {
         this.video.onloadedmetadata = () => {
-          this.video.play();
+          if (requestId !== this.cameraRequestId) {
+            resolve();
+            return;
+          }
+
+          this.video.play().catch(() => {});
           this.canvas.width = this.video.videoWidth || 1280;
           this.canvas.height = this.video.videoHeight || 720;
           state.cameraActive = true;
@@ -1260,8 +1274,14 @@ class BiometricApp {
         };
       });
 
+      if (requestId !== this.cameraRequestId) {
+        stream.getTracks().forEach(t => t.stop());
+        return;
+      }
+
       ui.showToast('Webcam feed online and calibrated', 'success');
     } catch (e) {
+      if (requestId !== this.cameraRequestId) return;
       console.error("Camera access failed:", e);
       ui.showToast(`Camera access failed: ${e.message}`, 'error');
     }
@@ -1313,10 +1333,13 @@ class BiometricApp {
     setInterval(() => {
       if (!state.cameraActive) return;
       state.timelineHistory.push({
+        timestamp: new Date().toISOString(),
         joy: state.smoothedEmotions.joy,
         surprise: state.smoothedEmotions.surprise,
         sadness: state.smoothedEmotions.sadness,
         anger: state.smoothedEmotions.anger,
+        fear: state.smoothedEmotions.fear,
+        disgust: state.smoothedEmotions.disgust,
         neutral: state.smoothedEmotions.neutral
       });
 
@@ -1375,9 +1398,9 @@ class BiometricApp {
       return;
     }
 
-    let csvContent = 'data:text/csv;charset=utf-8,Second,Joy,Surprise,Sadness,Anger,Neutral\n';
-    state.timelineHistory.forEach((row, i) => {
-      csvContent += `${i + 1},${row.joy.toFixed(3)},${row.surprise.toFixed(3)},${row.sadness.toFixed(3)},${row.anger.toFixed(3)},${row.neutral.toFixed(3)}\n`;
+    let csvContent = 'data:text/csv;charset=utf-8,Timestamp,Joy,Surprise,Sadness,Anger,Fear,Disgust,Neutral\n';
+    state.timelineHistory.forEach(row => {
+      csvContent += `${row.timestamp || ''},${row.joy.toFixed(3)},${row.surprise.toFixed(3)},${row.sadness.toFixed(3)},${row.anger.toFixed(3)},${row.fear.toFixed(3)},${row.disgust.toFixed(3)},${row.neutral.toFixed(3)}\n`;
     });
 
     const encodedUri = encodeURI(csvContent);
