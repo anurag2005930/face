@@ -1020,11 +1020,12 @@ class BiometricApp {
   async init() {
     ui.cacheElements();
     this.setupEventListeners();
-    await this.initMediaPipe();
+    const mediaPipeReady = await this.initMediaPipe();
+    if (!mediaPipeReady) return;
     await this.listCameras();
     
     // Auto-start camera
-    await this.startCamera();
+    await this.startCamera(state.activeCameraId);
     this.startMainLoop();
     this.startTimelineSampler();
   }
@@ -1222,9 +1223,11 @@ class BiometricApp {
       });
 
       ui.showToast('MediaPipe Face & Hand AI Engines Ready', 'success');
+      return true;
     } catch (e) {
       console.error("MediaPipe initialization error:", e);
       ui.showToast('AI Model initialization failed. Check internet connection.', 'error');
+      return false;
     }
   }
 
@@ -1379,12 +1382,14 @@ class BiometricApp {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ image: dataUrl, telemetry })
-      }).then(r => r.json()).then(res => {
-        if (res.success) {
-          ui.showToast(`Snapshot saved: ${res.filename}`, 'success');
+      }).then(async (response) => {
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok || !result.success) {
+          throw new Error(result.error || `Server returned HTTP ${response.status}`);
         }
-      }).catch(() => {
-        ui.showToast('Snapshot downloaded locally', 'success');
+        ui.showToast(`Snapshot saved: ${result.filename}`, 'success');
+      }).catch((error) => {
+        ui.showToast(`Snapshot downloaded locally; server save failed: ${error.message}`, 'info');
       });
     } catch (e) {
       console.error("Snapshot error:", e);

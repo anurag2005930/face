@@ -43,7 +43,13 @@ async def save_snapshot(request: Request):
         if content_length and int(content_length) > MAX_REQUEST_BYTES:
             return JSONResponse(status_code=413, content={"error": "Snapshot payload is too large"})
 
-        data = json.loads(await request.body())
+        body = bytearray()
+        async for chunk in request.stream():
+            body.extend(chunk)
+            if len(body) > MAX_REQUEST_BYTES:
+                return JSONResponse(status_code=413, content={"error": "Snapshot payload is too large"})
+
+        data = json.loads(bytes(body))
         if not isinstance(data, dict):
             return JSONResponse(status_code=400, content={"error": "Invalid snapshot request"})
         image_data = data.get("image", "")
@@ -75,7 +81,6 @@ async def save_snapshot(request: Request):
         return {
             "success": True,
             "filename": filename,
-            "path": str(filepath)
         }
     except (json.JSONDecodeError, ValueError, TypeError, Base64Error):
         return JSONResponse(status_code=400, content={"error": "Invalid snapshot request"})
